@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ExitedEvent, LoggingDebugSession, StoppedEvent, TerminatedEvent } from '@vscode/debugadapter';
+import { ExitedEvent, LoggingDebugSession, OutputEvent, StoppedEvent, TerminatedEvent } from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ChildProcess, execFile, exec, ExecException } from 'child_process';
 import * as fs from 'fs';
@@ -93,13 +93,32 @@ class AsepriteDebugAdapter extends ProtocolServer
         this.installSource();
 
         this.m_aseprite_process = execFile(this.m_aseprite_exe);
-        
+        this.m_aseprite_process.stdout?.on('data', data => this.logProcessOut(data, "ASEOUT", 'stdout'));
+        this.m_aseprite_process.stderr?.on('data', data => this.logProcessOut(data, "ASEERR", 'stderr'));
+
         await connection_received;
 
         // proceed with initialize request
 
         this.m_ws?.send(JSON.stringify(args));
     }
+
+    // custom name of aseprite debugger extension, if suffixed with an '!' to make sure it is loaded as the first extension.
+    // this does assume no other extensions will start with an '!', possible solution is to make the number of '!' configurable.
+    private static readonly ASEDEB_EXT_PATH: string = "!AsepriteDebugger";
+
+    private m_session: vscode.DebugSession;
+    
+    private m_ext_path: string;
+    private m_user_config_path: string | undefined;
+    // folder name the debugged extension was installed under, only used of projectTye = 'extension. 
+    private m_source_ext_name: string | undefined;
+
+    private m_aseprite_exe: string;
+    private m_aseprite_process: ChildProcess | undefined;
+    
+    private m_ws_server: WebSocketServer | undefined;
+    private m_ws: WebSocket | undefined;
 
     /**
      * forwards a message received from the debugger to the current debugger client.
@@ -146,7 +165,7 @@ class AsepriteDebugAdapter extends ProtocolServer
                 await promisify(fs.copyFile)(path.join(root, this.m_session.configuration.source), `${this.m_user_config_path}/scripts/${path.basename(this.m_session.configuration.source)}`);
                 break;
             case 'extension':
-                let src_path = path.join(root, this.m_session.configuration.source)
+                let src_path = path.join(root, this.m_session.configuration.source);
                 // retreive extension name.
 
                 if(!fs.existsSync(path.join(src_path, "package.json")))
@@ -164,7 +183,7 @@ class AsepriteDebugAdapter extends ProtocolServer
 
     private async installDebuggerExtension() {
 
-        let ext_path = `${this.m_user_config_path}/extensions/${this.m_user_config_path}`;
+        let ext_path = `${this.m_user_config_path}/extensions/${AsepriteDebugAdapter.ASEDEB_EXT_PATH}`;
 
         // copy extension files and dependencies.
         await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(`${this.m_ext_path}/out/debugger`, ext_path, { recursive: true });
@@ -201,19 +220,6 @@ class AsepriteDebugAdapter extends ProtocolServer
                 await this.uninstallExtension(this.m_source_ext_name as string);
             break;
         }
-    }
-
-    /**
-     * Show user uncaught exception, and stop debugging.
-     * TODO: capture aseprite output, and also put it here.
-     * @param ex 
-     */
-    private handleUncaughtException(ex: any): void
-    {
-        vscode.window.showErrorMessage(`${ex.toString()}\n${ex.stdout ? `stdout: ${ex.stdout}` : '' }`);
-        // add aseprite output here
-        this.sendEvent(new TerminatedEvent());
-        this.sendEvent(new ExitedEvent(this.m_aseprite_process?.exitCode ?? -1 ));
     }
 
     /**
@@ -260,22 +266,30 @@ class AsepriteDebugAdapter extends ProtocolServer
         return splits[0];
     }
 
-    // custom name of aseprite debugger extension, if suffixed with an '!' to make sure it is loaded as the first extension.
-    // this does assume no other extensions will start with an '!', possible solution is to make the number of '!' configurable.
-    private static readonly ASEDEB_EXT_PATH: string = "!AsepriteDebugger";
+        /**
+     * Show user uncaught exception, and stop debugging.
+     * TODO: capture aseprite output, and also put it here.
+     * @param ex 
+     */
+    private handleUncaughtException(ex: any): void
+    {
+        vscode.window.showErrorMessage(`${ex.toString()}\n${ex.stdout ? `stdout: ${ex.stdout}` : '' }`);
+        // add aseprite output here
+        this.sendEvent(new TerminatedEvent());
+        this.sendEvent(new ExitedEvent(this.m_aseprite_process?.exitCode ?? -1 ));
+    }
 
-    private m_session: vscode.DebugSession;
-    
-    private m_ext_path: string;
-    private m_user_config_path: string | undefined;
-    // folder name the debugged extension was installed under, only used of projectTye = 'extension. 
-    private m_source_ext_name: string | undefined;
 
-    private m_aseprite_exe: string;
-    private m_aseprite_process: ChildProcess | undefined;
-    
-    private m_ws_server: WebSocketServer | undefined;
-    private m_ws: WebSocket | undefined;
+    private logProcessOut(data: string, suffix: string, category: string): void
+    {
+        let msg = "";
+
+        let data_lines: string[] = data.toString().split(/\r?\n/);
+
+        data_lines.forEach((line, i, arr) => msg += `${suffix}: ${line}\n`);
+
+        this.sendEvent(new OutputEvent(msg, category));
+    }
 }
 
 /**
