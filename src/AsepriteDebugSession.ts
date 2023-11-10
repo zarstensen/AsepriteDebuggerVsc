@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ExitedEvent, LoggingDebugSession, OutputEvent, StoppedEvent, TerminatedEvent } from '@vscode/debugadapter';
+import { DebugSession, ExitedEvent, LoggingDebugSession, OutputEvent, StoppedEvent, TerminatedEvent } from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ChildProcess, execFile, exec, ExecException } from 'child_process';
 import * as fs from 'fs';
@@ -28,6 +28,11 @@ class AsepriteDebugAdapter extends ProtocolServer
         
         this.on('close', () => this.shutdown());
         this.on('error', err => this.shutdown());
+        process.on('SIGTERM', () => this.shutdown());
+    }
+
+    dispose() {
+        this.shutdown();
     }
 
     shutdown(): void
@@ -43,14 +48,30 @@ class AsepriteDebugAdapter extends ProtocolServer
      */
     protected dispatchRequest(request: DebugProtocol.Request): void
     {
-        if(request.command === 'initialize')
+        switch(request.command)
         {
-            this.initializeRequestAsync(request)
-            .catch(this.handleUncaughtException);
-            return;
+            case 'initialize':
+                this.initializeRequestAsync(request)
+                .catch(this.handleUncaughtException.bind(this));
+            break;
+            case 'disconnect':
+                this.m_ws?.send(JSON.stringify(request));
+
+                let response: DebugProtocol.DisconnectResponse = {
+                    request_seq: request.seq,
+                    success: true,
+                    command: request.command,
+                    seq: 0,
+                    type: 'response'
+                };
+                this.sendResponse(response);
+
+                this.shutdown();
+            break;
+            default:
+                this.m_ws?.send(JSON.stringify(request));
+            break;
         }
-        
-        this.m_ws?.send(JSON.stringify(request));
     }
 
     /**
@@ -94,7 +115,7 @@ class AsepriteDebugAdapter extends ProtocolServer
 
         this.m_aseprite_process = execFile(this.m_aseprite_exe);
         this.m_aseprite_process.stdout?.on('data', data => this.logProcessOut(data, "ASEOUT", 'stdout'));
-        this.m_aseprite_process.stderr?.on('data', data => this.logProcessOut(data, "ASEERR", 'stderr'));
+        this.m_aseprite_process.stderr?.on('data', data => this.logProcessOut(data, "ASEOUT", 'stderr'));
 
         await connection_received;
 
@@ -133,14 +154,7 @@ class AsepriteDebugAdapter extends ProtocolServer
                 this.sendEvent(message as DebugProtocol.Event);
             break;
             case 'response':
-                let response = message as DebugProtocol.Response;
-
-                this.sendResponse(response);
-                
-                if(response.command === 'disconnect')
-                {
-                    this.shutdown();
-                }
+                this.sendResponse(message as DebugProtocol.Response);
             break;
         }
     }
@@ -279,7 +293,12 @@ class AsepriteDebugAdapter extends ProtocolServer
         this.sendEvent(new ExitedEvent(this.m_aseprite_process?.exitCode ?? -1 ));
     }
 
-
+    /**
+     * Log process output to debug console, with a set suffix, so user can filter the messages away.
+     * @param data program output.
+     * @param suffix suffix to prepend every line in program output.
+     * @param category output event category to use.
+     */
     private logProcessOut(data: string, suffix: string, category: string): void
     {
         let msg = "";
