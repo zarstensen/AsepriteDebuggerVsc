@@ -1,0 +1,120 @@
+{
+  "name": "aseprite-debugger",
+  "displayName": "Aseprite Debugger VSC",
+  "description": "Visual Studio Code debug adapter for AsepriteDebugger",
+  "version": "0.0.1",
+  "publisher": "zarstensen",
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": [
+    "Debuggers"
+  ],
+  "activationEvents": [
+    "onDebug",
+    "onCommand:extension.aseprite-debugger.getScriptFile",
+    "onCommand:extension.aseprite-debugger.getExtensionFolder"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Aseprite Debugger",
+      "properties": {
+        "aseprite-debugger.asepriteExe": {
+          "type": "string",
+          "scope": "application",
+          "default": "aseprite",
+          "description": "Location of aseprite executable."
+        },
+        "aseprite-debugger.defaultWsPort": {
+          "type": "number",
+          "default": 9004,
+          "description": "Default port to listen for debugger connections on"
+        },
+        "aseprite-debugger.defaultWsPath": {
+          "type": "string",
+          "default": "ws",
+          "description": "Default path to listen for debugger connections on"
+        }
+      }
+    },
+    "breakpoints": [
+      {
+        "language": "lua"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "aseprite",
+        "label": "Aseprite",
+        "program": "./out/extension.js",
+        "runtime": "node",
+        "configurationAttributes": {
+          "launch": {
+            
+            "properties": {
+              "required": [ "type", "source", "port", "route" ],
+              "projectType": {
+                "type": "string",
+                "description": "Is the project an aseprite script or a aseprite extension.",
+                "enum": [
+                  "script",
+                  "extension"
+                ]
+              },
+              "source": {
+                "type": "string",
+                "description": "Path to an aseprite lua script or a folder containing an aseprite extension (depends on projectType)"
+              },
+              "wsPort": {
+                "type": "number",
+                "description": "Port aseprite debugger extension should connect to, during a debug session"
+              },
+              "wsPath": {
+                "type": "string",
+                "description": "Endpoint path aseprite debugger extension should connect to, during a debug session"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop at script execution",
+                "default": false
+              }
+            }
+          }
+        },
+        "variables": {
+          "AskForScriptFile": "extension.aseprite-debugger.getScriptFile"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile && && npm run build-luaws && npm run copy-assets",
+    "compile": "tsc -p ./",
+    "copy-deps": "rimraf ./out/assets && copyfiles -u 1 \"./assets/**/*\" ./out/assets && rimraf ./out/debugger && copyfiles -u 4 \"modules/AsepriteDebugger/src/Debugger/**/*\" ./out/debugger && rimraf .out/bin && copyfiles -u 3 \"luaws-build/install/bin/*\" ./out/bin",
+    "build-luaws": "cmake --version && cmake -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -S ./modules/AsepriteDebugger -B ./luaws-build && cd luaws-build && cmake --build . -j 24 --config Release && cmake --install . --config Release",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.2",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.84.0",
+    "@types/ws": "^8.5.9",
+    "@typescript-eslint/eslint-plugin": "^6.7.3",
+    "@typescript-eslint/parser": "^6.7.3",
+    "@vscode/test-electron": "^2.3.4",
+    "eslint": "^8.50.0",
+    "glob": "^10.3.3",
+    "mocha": "^10.2.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@vscode/debugadapter": "^1.64.0",
+    "copyfiles": "^2.4.1",
+    "rimraf": "^5.0.5",
+    "ws": "^8.14.2"
+  }
+}

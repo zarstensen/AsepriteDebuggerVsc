@@ -1,0 +1,7 @@
+luaws-build
+out
+dist
+node_modules
+.vscode-test/
+.test-ext-proj/
+*.vsix

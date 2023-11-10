@@ -1,0 +1,3 @@
+[submodule "modules/AsepriteDebugger"]
+	path = modules/AsepriteDebugger
+	url = https://github.com/zarstensen/AsepriteDebugger
