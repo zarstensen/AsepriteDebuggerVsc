@@ -26,20 +26,21 @@ class AsepriteDebugAdapter extends ProtocolServer
         this.m_ext_path = ext_path;
         this.m_aseprite_exe = vscode.workspace.getConfiguration('aseprite-debugger').get('asepriteExe')!;
         
-        this.on('close', () => this.shutdown());
-        this.on('error', err => this.shutdown());
-        process.on('SIGTERM', () => this.shutdown());
+        this.on('close', async () => await this.shutdown());
+        this.on('error', async err => await this.shutdown());
+        process.on('SIGTERM', async () => await this.shutdown());
     }
 
     dispose() {
         this.shutdown();
     }
 
-    shutdown(): void
+    private async shutdown(): Promise<void>
     {
+        this.m_ws?.close();
+        this.m_ws_server?.close();
         this.m_aseprite_process?.kill();
-        this.uninstallSource();
-        this.uninstallExtension(AsepriteDebugAdapter.ASEDEB_EXT_PATH);
+        await Promise.all([ this.uninstallSource(), this.uninstallExtension(AsepriteDebugAdapter.ASEDEB_EXT_PATH) ]);
     }
 
     /**
@@ -64,9 +65,10 @@ class AsepriteDebugAdapter extends ProtocolServer
                     seq: 0,
                     type: 'response'
                 };
-                this.sendResponse(response);
 
-                this.shutdown();
+                this.shutdown()
+                .then(() => this.sendResponse(response));
+
             break;
             default:
                 this.m_ws?.send(JSON.stringify(request));
@@ -88,7 +90,9 @@ class AsepriteDebugAdapter extends ProtocolServer
             throw Error("Could not retreive aseprite user config path!");
         }
         
-        await this.installDebuggerExtension();
+        // source is installed here already instead of in the launch request,
+        // as the debugger can only run if aseprite is running, and aseprite can only load the installed source when it is started.
+        await Promise.all([ this.installDebuggerExtension(), this.installSource() ]);
         
         // run websocket server.
         
@@ -108,10 +112,6 @@ class AsepriteDebugAdapter extends ProtocolServer
             });
         });
 
-        // source is installed here already instead of in the launch request,
-        // as the debugger can only run if aseprite is running, and aseprite can only load the installed source when it is started.
-
-        this.installSource();
 
         this.m_aseprite_process = execFile(this.m_aseprite_exe);
         this.m_aseprite_process.stdout?.on('data', data => this.logProcessOut(data, "ASEOUT", 'stdout'));
@@ -187,11 +187,11 @@ class AsepriteDebugAdapter extends ProtocolServer
                     throw Error("Invalid extension, missing package.json!");
                 }
 
-                let pckg = JSON.parse(await promisify(fs.readFile)(path.join(src_path, "package.json")).toString());
+                let pckg = JSON.parse((await promisify(fs.readFile)(path.join(src_path, "package.json"))).toString());
                 this.m_source_ext_name = pckg.name;
 
-                await promisify(fs.cp)(src_path, `${this.m_user_config_path}/extensions/${this.m_source_ext_name}`);
-                break;
+                await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(src_path, `${this.m_user_config_path}/extensions/${this.m_source_ext_name}`, { recursive: true });
+            break;
         }
     }
 
@@ -204,10 +204,41 @@ class AsepriteDebugAdapter extends ProtocolServer
         await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(`${this.m_ext_path}/out/bin`, ext_path, { recursive: true });
 
         // create the config.json file.
+
+        let folders = vscode.workspace.workspaceFolders;
+        
+        let root = "";
+
+        if(folders?.length! > 0)
+        {
+            root = folders![0].uri.fsPath;
+        }
+
+        let install_dir = "";
+
+        switch(this.m_session.configuration.projectType)
+        {
+            case 'script':
+                install_dir = `${this.m_user_config_path}/scripts/`;
+            break;
+            case 'extension':
+                install_dir = `${this.m_user_config_path}/extensions/${this.m_source_ext_name}`;
+            break;
+        }
+
+        let src_dir = path.join(root, this.m_session.configuration.source);
+
+        if((await promisify(fs.stat)(src_dir)).isFile())
+        {
+            src_dir = path.basename(src_dir);
+        }
+
         let config = {
             endpoint: `ws://localhost:${this.m_session.configuration.wsPort}/${this.m_session.configuration.wsPath}`,
+            source_dir: src_dir,
+            install_dir: install_dir
         };
-        
+
         await promisify(fs.writeFile)(`${ext_path}/config.json`, JSON.stringify(config));
     }
 
@@ -217,7 +248,7 @@ class AsepriteDebugAdapter extends ProtocolServer
      */
     private async uninstallExtension(ext_name: string)
     {
-        await promisify(fs.rmdir)(`${this.m_user_config_path}/extensions/${ext_name}`, { recursive: true });
+        await promisify(fs.rm)(`${this.m_user_config_path}/extensions/${ext_name}`, { recursive: true });
     }
 
     /**
@@ -230,7 +261,7 @@ class AsepriteDebugAdapter extends ProtocolServer
             case 'script':
                 await promisify(fs.unlink)(`${this.m_user_config_path}/scripts/${path.basename(this.m_session.configuration.source)}`);
             break;
-            case 'extenison':
+            case 'extension':
                 await this.uninstallExtension(this.m_source_ext_name as string);
             break;
         }
