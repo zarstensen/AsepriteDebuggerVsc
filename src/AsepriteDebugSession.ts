@@ -25,7 +25,7 @@ class AsepriteDebugAdapter extends ProtocolServer
         this.m_session = session;
         this.m_ext_path = ext_path;
         this.m_aseprite_exe = vscode.workspace.getConfiguration('aseprite-debugger').get('asepriteExe')!;
-        
+
         this.on('close', async () => await this.shutdown());
         this.on('error', async err => await this.shutdown());
         process.on('SIGTERM', async () => await this.shutdown());
@@ -65,10 +65,9 @@ class AsepriteDebugAdapter extends ProtocolServer
                     seq: 0,
                     type: 'response'
                 };
-
+            
                 this.shutdown()
                 .then(() => this.sendResponse(response));
-
             break;
             default:
                 this.m_ws?.send(JSON.stringify(request));
