@@ -10,6 +10,26 @@ import { Url } from 'url';
 import { ProtocolServer } from '@vscode/debugadapter/lib/protocol';
 
 /**
+ * custom event type for the aseprite debugger StackTraceUpdateEvent.
+ * 
+ * supplies information about how the current stacktrace has changed.
+ * 
+ */
+interface StackTraceUpdateEvent extends DebugProtocol.Event
+{
+    body: {
+        // type of change, equal to event passed in the lua debug hook.
+        type: string,
+        // equal to line argument in the lua debug hook.
+        line: number | undefined,
+        // name of the current stack frame which was update.
+        name: string | undefined,
+        // source code location of the current stack frame which was updated.
+        source: string | undefined
+    }
+}
+
+/**
  * aseprite debug adapter session, for installing, uninstalling and communicating with the aseprite debugger extension.
  * its primary purpose is to simply pipe client and aseprite debugger messages to each other, however some special requests and responses require extra functionality,
  * for starting and stopping aseprite with the aseprite debugger attached. 
@@ -70,7 +90,118 @@ class AsepriteDebugAdapter extends ProtocolServer
                 .then(() => this.sendResponse(response));
             break;
             default:
-                this.m_ws?.send(JSON.stringify(request));
+                if(!this.m_hit_exception)
+                {
+                    this.m_ws?.send(JSON.stringify(request));
+                }
+                else
+                {
+                    this.handleRequestOnError(request);
+                }
+            break;
+        }
+    }
+
+    /**
+     * handle requests when an error has hit,
+     * since debugger is then no longer able to receive requests.
+     * @param request 
+     */
+    private handleRequestOnError(request: DebugProtocol.Request)
+    {
+        switch(request.command)
+        {
+            case 'threads':
+                this.sendResponse({
+                    request_seq: request.seq,
+                    success: true,
+                    command: request.command,
+                    seq: 0,
+                    type: 'response',
+                    body: {
+                        threads: [{
+                            name: 'Main Thread',
+                            id: AsepriteDebugAdapter.THREAD_ID
+                        }]
+                    }
+                } as DebugProtocol.ThreadsResponse);
+            break;
+            case 'scopes':
+                // since we cannot communicate with the debugger now,
+                // now variables are retreivable, so return no scopes.
+                this.sendResponse({
+                    request_seq: request.seq,
+                    success: true,
+                    command: request.command,
+                    seq: 0,
+                    type: 'response'
+                } as DebugProtocol.ScopesResponse);
+            break;
+            case 'stackTrace':
+                // generate stacktrace, skipping any frames which has nonexistent sources,
+                // as these could be f.ex. error, which then would redirects the user to an invalid file,
+                // when attempting to view location of exception.
+
+                let stacktrace_request = request as DebugProtocol.StackTraceRequest;
+                
+                let start_frame = stacktrace_request.arguments.startFrame ?? 0;
+                let frame_count = stacktrace_request.arguments.levels ?? 1000;
+                
+                let stack_frames: DebugProtocol.StackFrame[] = [];
+                let added_frames = 0;
+
+                // loop over entire stacktrace,
+                // to count how many valid frames it contains whilst also adding requested stackframes to response body.
+                for(let i = 0; i < this.m_debugger_stacktrace.length; i++)
+                {
+                    let deb_stack_frame = this.m_debugger_stacktrace[this.m_debugger_stacktrace.length - i - 1];
+
+                    if(fs.existsSync(deb_stack_frame.source))
+                    {
+                        if(added_frames >= start_frame && added_frames < start_frame + frame_count)
+                        {
+                            stack_frames.push({
+                                // id does not matter, since no variables will be retreivable.
+                                id: 0,
+                                name: deb_stack_frame.name,
+                                column: 1,
+                                line: deb_stack_frame.line,
+                                source: {
+                                    path: deb_stack_frame.source
+                                }
+                            } as DebugProtocol.StackFrame);
+                        }
+
+                        added_frames++;
+                    }
+                }
+
+                this.sendResponse({
+                    request_seq: request.seq,
+                    success: true,
+                    command: request.command,
+                    seq: 0,
+                    type: 'response',
+                    body: {
+                        stackFrames: stack_frames,
+                        totalFrames: added_frames
+                    }
+                } as DebugProtocol.StackTraceResponse);
+            break;
+            case 'exceptionInfo':
+                this.sendResponse({
+                    request_seq: request.seq,
+                    success: true,
+                    command: request.command,
+                    seq: 0,
+                    type: 'response',
+                    body: {
+                        exceptionId: this.m_error_message
+                    }
+                } as DebugProtocol.ExceptionInfoResponse);
+            break;
+            case 'continue':
+                this.sendEvent(new TerminatedEvent());
             break;
         }
     }
@@ -113,7 +244,7 @@ class AsepriteDebugAdapter extends ProtocolServer
 
 
         this.m_aseprite_process = execFile(this.m_aseprite_exe);
-        this.m_aseprite_process.stdout?.on('data', data => this.logProcessOut(data, "ASEOUT", 'stdout'));
+        this.m_aseprite_process.stdout?.on('data', data => this.monitorAsepriteOut(data));
         this.m_aseprite_process.stderr?.on('data', data => this.logProcessOut(data, "ASEOUT", 'stderr'));
 
         await connection_received;
@@ -126,6 +257,7 @@ class AsepriteDebugAdapter extends ProtocolServer
     // custom name of aseprite debugger extension, if suffixed with an '!' to make sure it is loaded as the first extension.
     // this does assume no other extensions will start with an '!', possible solution is to make the number of '!' configurable.
     private static readonly ASEDEB_EXT_PATH: string = "!AsepriteDebugger";
+    private static readonly THREAD_ID = 1;
 
     private m_session: vscode.DebugSession;
     
@@ -140,6 +272,11 @@ class AsepriteDebugAdapter extends ProtocolServer
     private m_ws_server: WebSocketServer | undefined;
     private m_ws: WebSocket | undefined;
 
+    // current stacktrace, according to all received StackTraceUpdateEvents received from debugger.
+    private m_debugger_stacktrace: { source: string, line: number, name: string, is_tail_call: boolean }[] = [];
+    private m_hit_exception: boolean = false;
+    private m_error_message: string | undefined;
+
     /**
      * forwards a message received from the debugger to the current debugger client.
      * @param data message
@@ -150,7 +287,43 @@ class AsepriteDebugAdapter extends ProtocolServer
         switch((message as DebugProtocol.ProtocolMessage).type)
         {
             case 'event':
-                this.sendEvent(message as DebugProtocol.Event);
+                if((message as DebugProtocol.Event).event === "stackTraceUpdate")
+                {
+                    let stacktrace_event: StackTraceUpdateEvent = message;
+
+                    switch(stacktrace_event.body.type)
+                    {
+                        case 'call':
+                        case 'tail call':
+                            this.m_debugger_stacktrace.push({
+                                source: stacktrace_event.body.source as string,
+                                line: stacktrace_event.body.line as number,
+                                name: stacktrace_event.body.name as string,
+                                is_tail_call: stacktrace_event.body.type === 'tail call',
+                            });
+                        break;
+                        case 'line':
+                            if(this.m_debugger_stacktrace.length <= 0)
+                            {
+                                break;
+                            }
+                            
+                            this.m_debugger_stacktrace[this.m_debugger_stacktrace.length - 1].line = stacktrace_event.body.line as number;
+                        break;
+                        case 'return':
+                            let was_tail_call = true;
+                            while(this.m_debugger_stacktrace.length > 0 && was_tail_call)
+                            {
+                                was_tail_call = this.m_debugger_stacktrace[this.m_debugger_stacktrace.length - 1].is_tail_call;
+                                this.m_debugger_stacktrace.pop();
+                            }
+                        break;
+                    }
+                }
+                else
+                {
+                    this.sendEvent(message as DebugProtocol.Event);
+                }
             break;
             case 'response':
                 this.sendResponse(message as DebugProtocol.Response);
@@ -310,7 +483,7 @@ class AsepriteDebugAdapter extends ProtocolServer
         return splits[0];
     }
 
-        /**
+    /**
      * Show user uncaught exception, and stop debugging.
      * TODO: capture aseprite output, and also put it here.
      * @param ex 
@@ -322,6 +495,89 @@ class AsepriteDebugAdapter extends ProtocolServer
         this.sendEvent(new TerminatedEvent());
         this.sendEvent(new ExitedEvent(this.m_aseprite_process?.exitCode ?? -1 ));
     }
+
+    /**
+     * check if an error message exists in the passed aseprite stdout line.
+     * if an error message is detected, and it is from a source file in the current vscode workspace,
+     * an exception stop event is sent.
+     * 
+     * @param data stdout of aseprite program
+     */
+    private checkForError(data: string)
+    {
+        let err_match = data.match(/(.*):\d*:(.*)/);
+
+        if(!err_match)
+        {
+            return;
+        }
+        
+        let file = path.normalize(err_match[1]);
+        let message = err_match[3];
+
+        let folders = vscode.workspace.workspaceFolders;
+
+        let root = "";
+
+        if(folders?.length! > 0)
+        {
+            root = folders![0].uri.fsPath;
+        }
+
+
+        // check if error message originated from a source file that is currently being debugged.
+        switch(this.m_session.configuration.projectType)
+        {
+            case 'script': 
+                let script_file_match = file.match(new RegExp(`^${path.normalize(`${this.m_user_config_path}/scripts/(.*)`).replaceAll('\\', '\\\\').replaceAll('/', '\\/')}$`));
+
+                if(!script_file_match)
+                {
+                    return;
+                }
+
+                if(!fs.existsSync(path.join(root, path.dirname(this.m_session.configuration.source), script_file_match[1])))
+                {
+                    return;
+                }
+                
+            break;
+            case 'extension':
+                let norm_path = path.normalize(`${this.m_user_config_path}/extensions/${this.m_source_ext_name}/.*`).replaceAll('\\', '\\\\').replaceAll('/', '\\/');
+                let extension_folder_match = file.match(new RegExp(`^${norm_path}$`));
+
+                if(!extension_folder_match)
+                {
+                    return;
+                }
+            break;
+        }
+
+        // report error.
+        
+        this.m_hit_exception = true;
+        this.m_error_message = message;
+        this.sendEvent({
+            event: 'stopped',
+            body: {
+                reason: 'exception',
+                allThreadsStopped: true,
+                threadId: 1
+            }
+        } as DebugProtocol.Event);
+    }
+
+    /**
+     * Monitor output of aseprite for errors, whilst forwarding all output to client.
+     * @param data 
+     */
+    private monitorAsepriteOut(data: string)
+    {
+        this.checkForError(data);
+        this.logProcessOut(data, "ASEOUT", 'stdout');
+    }
+
+    
 
     /**
      * Log process output to debug console, with a set suffix, so user can filter the messages away.
