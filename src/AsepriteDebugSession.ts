@@ -513,7 +513,7 @@ class AsepriteDebugAdapter extends ProtocolServer
         }
         
         let file = path.normalize(err_match[1]);
-        let message = err_match[3];
+        let message = err_match[2];
 
         let folders = vscode.workspace.workspaceFolders;
 

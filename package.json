@@ -47,6 +47,9 @@
       {
         "type": "aseprite",
         "label": "Aseprite",
+        "languages": [
+          "lua"
+        ],
         "program": "./out/extension.js",
         "runtime": "node",
         "configurationAttributes": {
