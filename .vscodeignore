@@ -1,5 +1,8 @@
 .vscode/**
 .vscode-test/**
+luaws-build/**
+modules/**
+node_modules/**
 src/**
 .gitignore
 .yarnrc

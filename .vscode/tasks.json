@@ -7,10 +7,11 @@
 			"label": "watch",
 			"type": "npm",
 			"script": "watch",
-			"problemMatcher": "$tsc-watch",
+			"problemMatcher": "$ts-webpack-watch",
 			"isBackground": true,
 			"presentation": {
-				"reveal": "never"
+				"reveal": "silent",
+				"group": "watchers"
 			},
 			"group": {
 				"kind": "build",
