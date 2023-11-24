@@ -5,6 +5,8 @@ on:
     release:
         types: [published]
 
+
+
 jobs:
     package_extension:
         name: Publish Extension
@@ -25,7 +27,7 @@ jobs:
             run: npm install
 
           - name: Package Extension
-            run: npx vsce package
+            run: npx vsce package -o AsepriteDebugger.vsix
 
           - name: Upload Extension
             uses: actions/upload-artifact@v3
@@ -67,5 +69,5 @@ jobs:
               -H "X-GitHub-Api-Version: 2022-11-28" \
               -H "Content-Type: application/octet-stream" \
               "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ fromJson(steps.retrieve_release.outputs.data).id }}/assets?name=AsepriteDebugger.vsix" \
-              --data-binary "@AsepriteDebuggerVSC.vsix"
+              --data-binary "@AsepriteDebugger.vsix"
         
