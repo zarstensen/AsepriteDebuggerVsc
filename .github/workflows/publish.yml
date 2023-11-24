@@ -5,11 +5,9 @@ on:
     release:
         types: [published]
 
-
-
 jobs:
     package_extension:
-        name: Publish Extension
+        name: Package Extension
         runs-on: windows-latest
         steps:
           - name: Checkout Repo
@@ -45,11 +43,10 @@ jobs:
         steps:
           - name: Retreive Extension Artifact
             id: retreive_extension_artifact
+            if: success()
             uses: actions/download-artifact@v3
             with:
               name: "extension"
-          
-          - run: ls -R
 
           - name: Retrieve Release
             id: retrieve_release
@@ -59,8 +56,8 @@ jobs:
             with:
                 route: GET /repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}
 
-          - name: Publish Asset
-            id: publish_asset 
+          - name: Upload Asset
+            id: upload_asset 
             run: |
               curl -L \
               -X POST \
@@ -70,4 +67,31 @@ jobs:
               -H "Content-Type: application/octet-stream" \
               "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ fromJson(steps.retrieve_release.outputs.data).id }}/assets?name=AsepriteDebugger.vsix" \
               --data-binary "@AsepriteDebugger.vsix"
+
+    publish_extension:
+        name: Publish Extension
+        runs-on: ubuntu-latest
+        needs: package_extension
+        steps:
+          - name: Retreive Extension Artifact
+            id: retreive_extension_artifact
+            if: success()
+            uses: actions/download-artifact@v3
+            with:
+              name: "extension"
+
+          - name: Retrieve Release
+            id: retrieve_release
+            uses: octokit/request-action@v2.x
+            env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+                route: GET /repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}
+
+          - name: Publish Extension
+            id: publish_extension
+            env:
+              VSCE_PAT: ${{ secrets.VSCE_PAT }}
+            run: npx vsce publish --packagePath AsepriteDebugger.vsix
+
         
