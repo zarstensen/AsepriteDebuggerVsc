@@ -26,6 +26,13 @@
           "default": "aseprite",
           "description": "Location of aseprite executable."
         },
+        "aseprite-debugger.asepriteArch": {
+          "type": "string",
+          "scope": "application",
+          "default": "x64",
+          "enum": [ "x64", "win32" ],
+          "description": "Architecture of aseprite executable."
+        },
         "aseprite-debugger.defaultWsPort": {
           "type": "number",
           "default": 9004,
@@ -96,10 +103,11 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "webpack --mode production --devtool hidden-source-map && npm run build-luaws && npm run copy-deps",
+    "vscode:prepublish": "webpack --mode production --devtool hidden-source-map && npm run build-luaws-x64 && npm run build-luaws-win32 && npm run copy-deps",
     "compile": "webpack",
-    "copy-deps": "rimraf ./out/assets && copyfiles -u 1 \"./assets/**/*\" ./out/assets && rimraf ./out/debugger && copyfiles -u 4 \"modules/AsepriteDebugger/src/Debugger/**/*\" ./out/debugger && rimraf .out/bin && copyfiles -u 3 \"luaws-build/install/bin/*\" ./out/bin",
-    "build-luaws": "cmake --version && cmake -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -S ./modules/AsepriteDebugger -B ./luaws-build && cd luaws-build && cmake --build . -j 24 --config Release && cmake --install . --config Release",
+    "copy-deps": "rimraf ./out/assets && copyfiles -u 1 \"./assets/**/*\" ./out/assets && rimraf ./out/debugger && copyfiles -u 4 \"modules/AsepriteDebugger/src/Debugger/**/*\" ./out/debugger && rimraf .out/bin && copyfiles -u 3 \"luaws-build-x64/install/bin/*\" ./out/bin/x64 && copyfiles -u 3 \"luaws-build-win32/install/bin/*\" ./out/bin/win32",
+    "build-luaws-x64": "cmake --version && cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -S ./modules/AsepriteDebugger -B ./luaws-build-x64 && cd luaws-build-x64 && cmake --build . -j 24 --config Release && cmake --install . --config Release",
+    "build-luaws-win32": "cmake --version && cmake -DCMAKE_GENERATOR_PLATFORM=Win32 -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -S ./modules/AsepriteDebugger -B ./luaws-build-win32 && cd luaws-build-win32 && cmake --build . -j 24 --config Release && cmake --install . --config Release",
     "watch": "webpack --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",

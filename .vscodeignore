@@ -1,6 +1,6 @@
 .vscode/**
 .vscode-test/**
-luaws-build/**
+luaws-build*/**
 modules/**
 node_modules/**
 src/**

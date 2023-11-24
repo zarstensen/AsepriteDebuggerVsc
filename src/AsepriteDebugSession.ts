@@ -281,7 +281,8 @@ class AsepriteDebugAdapter extends ProtocolServer
      * forwards a message received from the debugger to the current debugger client.
      * @param data message
      */
-    private forwardDebuggerMessage(data: string): void {
+    private forwardDebuggerMessage(data: string): void
+    {
         let message = JSON.parse(data.toString());
 
         switch((message as DebugProtocol.ProtocolMessage).type)
@@ -335,7 +336,8 @@ class AsepriteDebugAdapter extends ProtocolServer
      * installs the aseprite projects source as a script or an extension, depending on the launch configuration
      * @param user_config_path path to install extensions to
      */
-    private async installSource() {
+    private async installSource()
+    {
         let folders = vscode.workspace.workspaceFolders;
         
         let root = "";
@@ -367,18 +369,19 @@ class AsepriteDebugAdapter extends ProtocolServer
         }
     }
 
-    private async installDebuggerExtension() {
-
+    private async installDebuggerExtension()
+    {
         let ext_path = `${this.m_user_config_path}/extensions/${AsepriteDebugAdapter.ASEDEB_EXT_PATH}`;
 
         // copy extension files and dependencies.
         await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(`${this.m_ext_path}/out/debugger`, ext_path, { recursive: true });
-        await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(`${this.m_ext_path}/out/bin`, ext_path, { recursive: true });
+        await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(`${this.m_ext_path}/out/bin/${vscode.workspace.getConfiguration('aseprite-debugger').get('asepriteArch')}`,
+            ext_path, { recursive: true });
 
         // create the config.json file.
 
         let folders = vscode.workspace.workspaceFolders;
-        
+
         let root = "";
 
         if(folders?.length! > 0)

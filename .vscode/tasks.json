@@ -36,9 +36,22 @@
 			}
 		},
 		{
-			"label": "build-luaws",
+			"label": "build-luaws-x64",
 			"type": "npm",
-			"script": "build-luaws",
+			"script": "build-luaws-x64",
+			"isBackground": false,
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"clear": true
+			}
+		},
+		{
+			"label": "build-luaws-win32",
+			"type": "npm",
+			"script": "build-luaws-win32",
 			"isBackground": false,
 			"presentation": {
 				"echo": true,
@@ -53,7 +66,8 @@
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"watch",
-				"build-luaws",
+				"build-luaws-x64",
+				"build-luaws-win32",
 				"copy-deps"
 			],
 			"group": {
