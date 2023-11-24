@@ -4,6 +4,14 @@
   "description": "Visual Studio Code debug adapter for AsepriteDebugger",
   "version": "0.0.1",
   "publisher": "zarstensen",
+  "homepage": "https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/README.md",
+  "bugs": {
+    "url": "https://github.com/zarstensen/AsepriteDebugger/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zarstensen/AsepriteDebugger.git"
+  },
   "engines": {
     "vscode": "^1.84.0"
   },
