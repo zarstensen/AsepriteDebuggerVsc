@@ -1,4 +1,4 @@
-luaws-build
+luaws-build*/
 out
 dist
 node_modules
