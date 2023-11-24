@@ -17,7 +17,7 @@ jobs:
               submodules: recursive
               
           - name: npm
-            uses: actions/setup-node@v2
+            uses: actions/setup-node@v4
             with:
               node-version: 18.x
 
@@ -25,7 +25,7 @@ jobs:
             run: npm install
 
           - name: Package Extension
-            run: npx vsce package -o AsepriteDebugger.vsix
+            run: npx vsce package -o ${{ EXT_NAME }}.vsix
 
           - name: Upload Extension
             uses: actions/upload-artifact@v3
@@ -65,8 +65,8 @@ jobs:
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               -H "Content-Type: application/octet-stream" \
-              "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ fromJson(steps.retrieve_release.outputs.data).id }}/assets?name=AsepriteDebugger.vsix" \
-              --data-binary "@AsepriteDebugger.vsix"
+              "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ fromJson(steps.retrieve_release.outputs.data).id }}/assets?name=${{ EXT_NAME }}.vsix" \
+              --data-binary "@${{ EXT_NAME }}.vsix"
 
     publish_extension:
         name: Publish Extension
@@ -92,6 +92,6 @@ jobs:
             id: publish_extension
             env:
               VSCE_PAT: ${{ secrets.VSCE_PAT }}
-            run: npx vsce publish --packagePath AsepriteDebugger.vsix
+            run: npx vsce publish --packagePath ${{ EXT_NAME }}.vsix
 
         
