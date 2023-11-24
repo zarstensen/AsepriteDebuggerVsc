@@ -39,6 +39,7 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: write
+        needs: package_extension
         steps:
           - name: Retreive Extension Artifact
             id: retreive_extension_artifact
