@@ -6,7 +6,7 @@
 [![build](https://img.shields.io/github/actions/workflow/status/zarstensen/AsepriteDebugger/tests.yml?label=tests
 )](https://github.com/zarstensen/AsepriteDebugger/actions/workflows/tests.yml) [![marketplace](https://img.shields.io/visual-studio-marketplace/v/zarstensen.aseprite-debugger?label=visual%20studio%20marketplace)](https://marketplace.visualstudio.com/items?itemName=zarstensen.aseprite-debugger)
 
-Aseprite Debugger is an Visual Studio Code extension, which enables debugging of [Aseprite](https://www.aseprite.org/) scripts and extensions.
+Aseprite Debugger VSC is an Visual Studio Code extension, which enables debugging of [Aseprite](https://www.aseprite.org/) scripts and extensions.
 
 - [Features](#features)
   - [Breakpoints](#breakpoints)
@@ -66,7 +66,7 @@ Debug either scripts or extensions.
 
 ## Setup Extension
 
-the Aseprite Debugger extension require some setup after an initial install, please perform the below steps to ensure it will work properly.
+the Aseprite Debugger VSC extension require some setup after an initial install, please perform the below steps to ensure it will work properly.
 
 ### Install Extension
 
