@@ -37,31 +37,31 @@ Aseprite Debugger is an Visual Studio Code extension, which enables debugging of
 
 Set breakpoints, step through code and view stack trace.
 
-![Breakpoints Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/12-readme/assets/Breakpoints.gif?raw=true)
+![Breakpoints Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/assets/Breakpoints.gif?raw=true)
 
 ### Variable Inspection
 
 Inspect values of variables, including Aseprite objects.
 
-![Variables Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/12-readme/assets/Variables.gif?raw=true)
+![Variables Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/assets/Variables.gif?raw=true)
 
 ### Logging
 
 View logs in VSCode Debug Console, instead of the Aseprite Console window.
 
-![Logging Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/12-readme/assets/Logging.gif?raw=true)
+![Logging Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/assets/Logging.gif?raw=true)
 
 ### Error Detection
 
 Detect lua errors, and provide a full stacktrace of the problematic code.
 
-![Errors Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/12-readme/assets/Errors.gif?raw=true)
+![Errors Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/assets/Errors.gif?raw=true)
 
 ### Script And Extension Support
 
 Debug either scripts or extensions.
 
-![Project Types Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/12-readme/assets/ProjectTypes.gif?raw=true)
+![Project Types Example](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/assets/ProjectTypes.gif?raw=true)
 
 ## Setup Extension
 
@@ -81,7 +81,7 @@ Make sure this extension, or a similar one, is installed before proceeding.
 
 Go to the Aseprite Debugger extension settings, and change the 'Aseprite Exe' property to a path pointing to an aseprite executable file.
 
-![Aseprite Exe Screenshot](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/12-readme/assets/AsepriteExeScreenshot.png?raw=true)
+![Aseprite Exe Screenshot](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/assets/AsepriteExeScreenshot.png?raw=true)
 
 If installed through steam, its location can be determined by finding aseprite in your library, right clicking it and pressing the Manage > Browse local files item.
 
@@ -93,7 +93,7 @@ Alternatively, the located aseprite executable can be added to path, and then th
 
 Go to the Aseprite Debugger extension settings, and change the 'Aseprite Arch' property to the architecture of the aseprite executable pointed to by 'Aseprite Path'.
 
-![Aseprite Arch Screenshot](https://github.com/zarstensen/AsepriteDebuggerVsc/blob/12-readme/assets/AsepriteArchScreenshot.png?raw=true)
+![Aseprite Arch Screenshot](https://github.com/zarstensen/AsepriteDebuggerVsc/blob/main/assets/AsepriteArchScreenshot.png?raw=true)
 
 The architecture can be determined by examening the last section of the title bar title in an open Aseprite program.
 
