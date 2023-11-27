@@ -20,7 +20,7 @@ Aseprite Debugger is an Visual Studio Code extension, which enables debugging of
   - [Specify Aseprite Location](#specify-aseprite-location)
   - [Specify Executable Architecture (optional)](#specify-executable-architecture-optional)
 - [Setup VSCode Workspace for Debugging](#setup-vscode-workspace-for-debugging)
-  - [Commands](#commands)
+- [Commands](#commands)
 - [Limitations](#limitations)
   - [Editing Source Files Whilst Debugging](#editing-source-files-whilst-debugging)
   - [Aseprite Control](#aseprite-control)
@@ -102,19 +102,22 @@ The architecture can be determined by examening the last section of the title ba
 To set up a Visual Studio Code workspace for Aseprite Debugging, follow the below steps.
 
 - go to the 'Run and Debug' menu in the activity bar, and press 'create a launch.json file'.
+- Select the 'Aseprite' debugger.
 - Select 'script' or 'extension' depending on your project type.
 - Select the location of the lua source files, this will be a file or a folder depending on the project type.
   If the extension project type was selected, the source folder must contain a valid package.json.
 
 Debugging the workspace will now run Aseprite with the debugger attached, and the script or extension intalled in Aseprite.
 
-### Commands
+The first time the debugger is run, Aseprite will prompt the user for script permissions, make sure to select 'Give full trust to this script' for the 'Aseprite Debugger' script when this pops up.
+
+## Commands
 
 To retreive the latest stacktrace from the debugger, the command 'Aseprite Debugger: Show Latest Stacktrace' can be used.
 This will pause the debug session and show the stacktrace.
 The debug session will terminate when continued, after this command has been used.
 
-This command is primarily useful for getting the stacktrace of an error not caught by the debugger.
+This command is primarily useful for getting the stacktrace of an error not caught by the debugger, see [Non Error Errors](#non-error-errors).
 
 ## Limitations
 
