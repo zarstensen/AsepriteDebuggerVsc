@@ -6,7 +6,7 @@
 [![build](https://img.shields.io/github/actions/workflow/status/zarstensen/AsepriteDebugger/tests.yml?label=tests
 )](https://github.com/zarstensen/AsepriteDebugger/actions/workflows/tests.yml) [![marketplace](https://img.shields.io/visual-studio-marketplace/v/zarstensen.aseprite-debugger?label=visual%20studio%20marketplace)](https://marketplace.visualstudio.com/items?itemName=zarstensen.aseprite-debugger)
 
-This is an Visual Studio Code extension, which enables debugging of [Aseprite](https://www.aseprite.org/) scripts and extensions.
+Aseprite Debugger is an Visual Studio Code extension, which enables debugging of [Aseprite](https://www.aseprite.org/) scripts and extensions.
 
 - [Features](#features)
   - [Breakpoints](#breakpoints)
@@ -19,11 +19,14 @@ This is an Visual Studio Code extension, which enables debugging of [Aseprite](h
   - [Install Lua Language Support](#install-lua-language-support)
   - [Specify Aseprite Location](#specify-aseprite-location)
   - [Specify Executable Architecture (optional)](#specify-executable-architecture-optional)
-- [How To Use](#how-to-use)
-  - [Script](#script)
-  - [Extension](#extension)
+- [Setup VSCode Workspace for Debugging](#setup-vscode-workspace-for-debugging)
   - [Commands](#commands)
 - [Limitations](#limitations)
+  - [Editing Source Files Whilst Debugging](#editing-source-files-whilst-debugging)
+  - [Aseprite Control](#aseprite-control)
+  - [Extension Name](#extension-name)
+  - [Lua Globals](#lua-globals)
+  - [Non Error Errors](#non-error-errors)
 - [Built With](#built-with)
 - [Links](#links)
 - [License](#license)
@@ -78,7 +81,7 @@ Make sure this extension, or a similar one, is installed before proceeding.
 
 Go to the Aseprite Debugger extension settings, and change the 'Aseprite Exe' property to a path pointing to an aseprite executable file.
 
-![Aseprite Exe Screenshot](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/12-readme/AsepriteExeScreenshot.png?raw=true)
+![Aseprite Exe Screenshot](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/12-readme/assets/AsepriteExeScreenshot.png?raw=true)
 
 If installed through steam, its location can be determined by finding aseprite in your library, right clicking it and pressing the Manage > Browse local files item.
 
@@ -90,28 +93,53 @@ Alternatively, the located aseprite executable can be added to path, and then th
 
 Go to the Aseprite Debugger extension settings, and change the 'Aseprite Arch' property to the architecture of the aseprite executable pointed to by 'Aseprite Path'.
 
-![Aseprite Arch Screenshot](https://github.com/zarstensen/AsepriteDebuggerVSC/blob/main/12-readme/AsepriteArchScreenshot.png?raw=true)
+![Aseprite Arch Screenshot](https://github.com/zarstensen/AsepriteDebuggerVsc/blob/12-readme/assets/AsepriteArchScreenshot.png?raw=true)
 
 The architecture can be determined by examening the last section of the title bar title in an open Aseprite program.
 
-## How To Use
+## Setup VSCode Workspace for Debugging
 
-### Script
+To set up a Visual Studio Code workspace for Aseprite Debugging, follow the below steps.
 
-### Extension
+- go to the 'Run and Debug' menu in the activity bar, and press 'create a launch.json file'.
+- Select 'script' or 'extension' depending on your project type.
+- Select the location of the lua source files, this will be a file or a folder depending on the project type.
+  If the extension project type was selected, the source folder must contain a valid package.json.
+
+Debugging the workspace will now run Aseprite with the debugger attached, and the script or extension intalled in Aseprite.
 
 ### Commands
 
+To retreive the latest stacktrace from the debugger, the command 'Aseprite Debugger: Show Latest Stacktrace' can be used.
+This will pause the debug session and show the stacktrace.
+The debug session will terminate when continued, after this command has been used.
+
+This command is primarily useful for getting the stacktrace of an error not caught by the debugger.
+
 ## Limitations
 
-- aseprite control
+### Editing Source Files Whilst Debugging
 
-- extension naming
+If a source file is modified whilst debugging, the changes will not be reflected until the debug session has been restarted, as the source files are installed only on debug session starts.
 
-- namespaces used
-- global functions overridden
+### Aseprite Control
 
-- non error errors
+The Aseprite application will freeze preventing any user interaction, when the debugger is paused.
+This is caused by the debugger needing to block the currently running lua script, which in turn blocks the entire Aseprite application process.
+
+### Extension Name
+
+The debugged extension must not start with '!', as it would no longer be guaranteed for the debugger to be loaded as the first extension.
+
+### Lua Globals
+
+The debugger lives inside the ASEDEB global namespace, so this value should not be modified in any scripts or extensions running in Aseprite.
+Additionally, the debugger overrides the global 'print' and 'error' functions, so these should not be reassigned, without calling the original print and error functions inside the reassigned functions.
+
+### Non Error Errors
+
+The debugger is not able to catch an error, if it was not caused by a call to 'error'.
+If an error is hit, and it is not caught by the debugger, you can use the 'Aseprite Debugger: Show Latest Stacktrace' as a workaround for getting the stacktrace of the error, provided no other scripts have run after the error was thrown.
 
 ## Built With
 
