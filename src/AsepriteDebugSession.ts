@@ -18,14 +18,16 @@ import { ProtocolServer } from '@vscode/debugadapter/lib/protocol';
 interface StackTraceUpdateEvent extends DebugProtocol.Event
 {
     body: {
-        // type of change, equal to event passed in the lua debug hook.
-        type: string,
+        // action to perform on current stacktrace.
+        action: 'push' | 'pop' | 'update_line',
         // equal to line argument in the lua debug hook.
         line: number | undefined,
         // name of the current stack frame which was update.
         name: string | undefined,
         // source code location of the current stack frame which was updated.
-        source: string | undefined
+        source: string | undefined,
+        // number of items to pop, if action is pop
+        pop_count: number | undefined,
     }
 }
 
@@ -49,9 +51,15 @@ class AsepriteDebugAdapter extends ProtocolServer
         this.on('close', async () => await this.shutdown());
         this.on('error', async err => await this.shutdown());
         process.on('SIGTERM', async () => await this.shutdown());
+
+        this.m_show_stacktrace_cmd = vscode.commands.registerCommand('extension.aseprite-debugger.showLatestStacktrace', () => {
+            this.m_lost_debug_connection = true;
+            this.sendEvent(new StoppedEvent('pause', 1));
+        });
     }
 
     dispose() {
+        this.m_show_stacktrace_cmd.dispose();
         this.shutdown();
     }
 
@@ -90,7 +98,7 @@ class AsepriteDebugAdapter extends ProtocolServer
                 .then(() => this.sendResponse(response));
             break;
             default:
-                if(!this.m_hit_exception)
+                if(!this.m_lost_debug_connection)
                 {
                     this.m_ws?.send(JSON.stringify(request));
                 }
@@ -273,9 +281,11 @@ class AsepriteDebugAdapter extends ProtocolServer
     private m_ws: WebSocket | undefined;
 
     // current stacktrace, according to all received StackTraceUpdateEvents received from debugger.
-    private m_debugger_stacktrace: { source: string, line: number, name: string, is_tail_call: boolean }[] = [];
-    private m_hit_exception: boolean = false;
+    private m_debugger_stacktrace: { source: string, line: number, name: string }[] = [];
+    private m_lost_debug_connection: boolean = false;
     private m_error_message: string | undefined;
+
+    private m_show_stacktrace_cmd: vscode.Disposable;
 
     /**
      * forwards a message received from the debugger to the current debugger client.
@@ -292,18 +302,16 @@ class AsepriteDebugAdapter extends ProtocolServer
                 {
                     let stacktrace_event: StackTraceUpdateEvent = message;
 
-                    switch(stacktrace_event.body.type)
+                    switch(stacktrace_event.body.action)
                     {
-                        case 'call':
-                        case 'tail call':
+                        case 'push':
                             this.m_debugger_stacktrace.push({
                                 source: stacktrace_event.body.source as string,
                                 line: stacktrace_event.body.line as number,
                                 name: stacktrace_event.body.name as string,
-                                is_tail_call: stacktrace_event.body.type === 'tail call',
-                            });
+                                });
                         break;
-                        case 'line':
+                        case 'update_line':
                             if(this.m_debugger_stacktrace.length <= 0)
                             {
                                 break;
@@ -311,11 +319,9 @@ class AsepriteDebugAdapter extends ProtocolServer
                             
                             this.m_debugger_stacktrace[this.m_debugger_stacktrace.length - 1].line = stacktrace_event.body.line as number;
                         break;
-                        case 'return':
-                            let was_tail_call = true;
-                            while(this.m_debugger_stacktrace.length > 0 && was_tail_call)
+                        case 'pop':
+                            for(let i: number = 0; i < (stacktrace_event.body.pop_count ?? 0); i++)
                             {
-                                was_tail_call = this.m_debugger_stacktrace[this.m_debugger_stacktrace.length - 1].is_tail_call;
                                 this.m_debugger_stacktrace.pop();
                             }
                         break;
@@ -394,7 +400,7 @@ class AsepriteDebugAdapter extends ProtocolServer
         switch(this.m_session.configuration.projectType)
         {
             case 'script':
-                install_dir = `${this.m_user_config_path}/scripts/`;
+                install_dir = `${this.m_user_config_path}/scripts/${path.basename(this.m_session.configuration.source)}`;
             break;
             case 'extension':
                 install_dir = `${this.m_user_config_path}/extensions/${this.m_source_ext_name}`;
@@ -402,11 +408,6 @@ class AsepriteDebugAdapter extends ProtocolServer
         }
 
         let src_dir = path.join(root, this.m_session.configuration.source);
-
-        if((await promisify(fs.stat)(src_dir)).isFile())
-        {
-            src_dir = path.basename(src_dir);
-        }
 
         let config = {
             endpoint: `ws://localhost:${this.m_session.configuration.wsPort}/${this.m_session.configuration.wsPath}`,
@@ -558,7 +559,7 @@ class AsepriteDebugAdapter extends ProtocolServer
 
         // report error.
         
-        this.m_hit_exception = true;
+        this.m_lost_debug_connection = true;
         this.m_error_message = message;
         this.sendEvent({
             event: 'stopped',

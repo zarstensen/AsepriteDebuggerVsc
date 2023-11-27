@@ -2,6 +2,7 @@
 .vscode-test/**
 luaws-build*/**
 modules/**
+!modules/AsepriteDebugger/assets/AsepriteDebuggerIcon.png
 node_modules/**
 src/**
 .gitignore
