@@ -27,6 +27,7 @@ Aseprite Debugger VSC is an Visual Studio Code extension, which enables debuggin
   - [Extension Name](#extension-name)
   - [Lua Globals](#lua-globals)
   - [Non Error Errors](#non-error-errors)
+  - [Windows Only](#windows-only)
 - [Built With](#built-with)
 - [Links](#links)
 - [License](#license)
@@ -143,6 +144,10 @@ Additionally, the debugger overrides the global 'print' and 'error' functions, s
 
 The debugger is not able to catch an error, if it was not caused by a call to 'error'.
 If an error is hit, and it is not caught by the debugger, you can use the 'Aseprite Debugger: Show Latest Stacktrace' as a workaround for getting the stacktrace of the error, provided no other scripts have run after the error was thrown.
+
+### Windows Only
+
+The debugger currently only works on windows, as aseprite is not able to load shared libraries on macos or linux, which is required for the debugger to work.
 
 ## Built With
 

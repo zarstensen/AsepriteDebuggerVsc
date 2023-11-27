@@ -3,6 +3,7 @@
 import * as vscode from 'vscode';
 import { AsepriteDebugAdapterFactory } from './AsepriteDebugSession';
 import { AsepriteDebuggerConfigProvider } from './AsepriteDebuggerConfigProvider';
+import path = require('path');
 
 
 
@@ -13,8 +14,18 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// prompt user to select a lua file.
 	context.subscriptions.push(vscode.commands.registerCommand('extension.aseprite-debugger.getScriptFile', async () => {
+		
+		let script_file = "script.lua";
+
+		let folders = vscode.workspace.workspaceFolders;
+
+		if(folders)
+		{
+			script_file = path.join(folders[0].uri.fsPath, script_file);
+		}
+
 		return await vscode.window.showOpenDialog({
-			defaultUri: vscode.Uri.file("script.lua"),
+			defaultUri: vscode.Uri.file(script_file),
 			openLabel: "select",
 			canSelectMany: false,
 			filters: {
@@ -26,8 +37,18 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// prompt user to select a folder.
 	context.subscriptions.push(vscode.commands.registerCommand('extension.aseprite-debugger.getExtensionFolder', () => {
+		
+		let script_folder = "src";
+
+		let folders = vscode.workspace.workspaceFolders;
+
+		if(folders)
+		{
+			script_folder = path.join(folders[0].uri.fsPath, script_folder);
+		}
+
 		return vscode.window.showOpenDialog({
-			defaultUri: vscode.Uri.file("src"),
+			defaultUri: vscode.Uri.file(script_folder),
 			openLabel: "select",
 			canSelectFiles: false,
 			canSelectFolders: true,

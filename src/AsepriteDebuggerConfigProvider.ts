@@ -46,15 +46,7 @@ export class AsepriteDebuggerConfigProvider implements vscode.DebugConfiguration
         }
 
         return get_proj_type
-        .then(type => {
-            switch(type)
-            {
-                case 'script':
-                    return this.createConfig("Aseprite Script", "script", "${file}");
-                case 'extension':
-                    return this.configFromTypeAndPrompt(type);
-            }
-        });
+        .then(type => this.configFromTypeAndPrompt(type));
     }
 
     /**
@@ -63,7 +55,7 @@ export class AsepriteDebuggerConfigProvider implements vscode.DebugConfiguration
     private promptProjType(): Thenable<string | undefined>
     {
         return vscode.window.showQuickPick([ "script", "extension" ], {
-            title: "Aseprite Script Type",
+            title: "Aseprite Project Type",
             matchOnDescription: true,
             canPickMany: false
         });
