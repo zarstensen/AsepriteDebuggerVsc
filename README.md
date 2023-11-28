@@ -96,7 +96,8 @@ Go to the Aseprite Debugger extension settings, and change the 'Aseprite Arch' p
 
 ![Aseprite Arch Screenshot](https://github.com/zarstensen/AsepriteDebuggerVsc/blob/main/assets/AsepriteArchScreenshot.png?raw=true)
 
-The architecture can be determined by examening the last section of the title bar title in an open Aseprite program.
+The architecture can be determined by going to 'Help' > 'About' in aseprite, and examining the version number.
+The last section will specify the architecture, (ex. Aseprite v1.3-x64 means architecture is x64)
 
 ## Setup VSCode Workspace for Debugging
 
