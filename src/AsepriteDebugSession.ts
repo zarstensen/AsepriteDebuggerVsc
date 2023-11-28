@@ -448,7 +448,7 @@ class AsepriteDebugAdapter extends ProtocolServer
      */
     private async getUserConfigPath(): Promise<string | undefined>
     {
-        let result = await promisify(exec)(`${this.m_aseprite_exe} -b --script "./assets/getUserConfigPath.lua"`, {
+        let result = await promisify(exec)(`"${this.m_aseprite_exe}" -b --script "./assets/getUserConfigPath.lua"`, {
             cwd: this.m_ext_path
         });
         
