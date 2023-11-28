@@ -2,7 +2,7 @@
   "name": "aseprite-debugger",
   "displayName": "Aseprite Debugger VSC",
   "description": "Visual Studio Code debug adapter for AsepriteDebugger",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "modules/AsepriteDebugger/assets/AsepriteDebuggerIcon.png",
   "publisher": "zarstensen",
   "homepage": "https://github.com/zarstensen/AsepriteDebuggerVSC",
