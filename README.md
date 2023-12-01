@@ -20,6 +20,7 @@ Aseprite Debugger VSC is an Visual Studio Code extension, which enables debuggin
   - [Specify Aseprite Location](#specify-aseprite-location)
   - [Specify Executable Architecture (optional)](#specify-executable-architecture-optional)
 - [Setup VSCode Workspace for Debugging](#setup-vscode-workspace-for-debugging)
+- [Source Location](#source-location)
 - [Commands](#commands)
 - [Limitations](#limitations)
   - [Editing Source Files Whilst Debugging](#editing-source-files-whilst-debugging)
@@ -112,6 +113,11 @@ To set up a Visual Studio Code workspace for Aseprite Debugging, follow the belo
 Debugging the workspace will now run Aseprite with the debugger attached, and the script or extension intalled in Aseprite.
 
 The first time the debugger is run, Aseprite will prompt the user for script permissions, make sure to select 'Give full trust to this script' for the 'Aseprite Debugger' script when this pops up.
+
+## Source Location
+
+Lua source files do not have to exists in the aseprite scripts or extensions folder for the debugger to work, as all source files are automatically copied and removed on debug session starts and ends.
+This prevents the aseprite scripts and extensions folder being cluttered with .vscode and launch.json files, produced by a vscode workspace.
 
 ## Commands
 
