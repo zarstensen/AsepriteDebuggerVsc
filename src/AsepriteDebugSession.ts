@@ -344,33 +344,29 @@ class AsepriteDebugAdapter extends ProtocolServer
      */
     private async installSource()
     {
-        let folders = vscode.workspace.workspaceFolders;
-        
-        let root = "";
-
-        if(folders?.length! > 0)
+        // no need to do anything if source files are already at the install location.
+        if(path.relative(this.sourcePath(), this.installPath()) === '')
         {
-            root = folders![0].uri.fsPath;
+            return;
         }
 
         switch(this.m_session.configuration.projectType)
         {
             case 'script':
-                await promisify(fs.copyFile)(path.join(root, this.m_session.configuration.source), `${this.m_user_config_path}/scripts/${path.basename(this.m_session.configuration.source)}`);
+                await promisify(fs.copyFile)(this.sourcePath(), this.installPath());
                 break;
             case 'extension':
-                let src_path = path.join(root, this.m_session.configuration.source);
                 // retreive extension name.
 
-                if(!fs.existsSync(path.join(src_path, "package.json")))
+                if(!fs.existsSync(path.join(this.sourcePath(), "package.json")))
                 {
                     throw Error("Invalid extension, missing package.json!");
                 }
 
-                let pckg = JSON.parse((await promisify(fs.readFile)(path.join(src_path, "package.json"))).toString());
+                let pckg = JSON.parse((await promisify(fs.readFile)(path.join(this.sourcePath(), "package.json"))).toString());
                 this.m_source_ext_name = pckg.name;
 
-                await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(src_path, `${this.m_user_config_path}/extensions/${this.m_source_ext_name}`, { recursive: true });
+                await promisify<string | URL, string | URL, fs.CopyOptions>(fs.cp)(this.sourcePath(), this.installPath(), { recursive: true });
             break;
         }
     }
@@ -386,33 +382,10 @@ class AsepriteDebugAdapter extends ProtocolServer
 
         // create the config.json file.
 
-        let folders = vscode.workspace.workspaceFolders;
-
-        let root = "";
-
-        if(folders?.length! > 0)
-        {
-            root = folders![0].uri.fsPath;
-        }
-
-        let install_dir = "";
-
-        switch(this.m_session.configuration.projectType)
-        {
-            case 'script':
-                install_dir = `${this.m_user_config_path}/scripts/${path.basename(this.m_session.configuration.source)}`;
-            break;
-            case 'extension':
-                install_dir = `${this.m_user_config_path}/extensions/${this.m_source_ext_name}`;
-            break;
-        }
-
-        let src_dir = path.join(root, this.m_session.configuration.source);
-
         let config = {
             endpoint: `ws://localhost:${this.m_session.configuration.wsPort}/${this.m_session.configuration.wsPath}`,
-            source_dir: src_dir,
-            install_dir: install_dir
+            source_dir: this.sourcePath(),
+            install_dir: this.installPath()
         };
 
         await promisify(fs.writeFile)(`${ext_path}/config.json`, JSON.stringify(config));
@@ -432,10 +405,16 @@ class AsepriteDebugAdapter extends ProtocolServer
      */
     private async uninstallSource()
     {
+        // avoid completely deleting source files, if they are located at the install path.
+        if(path.relative(this.sourcePath(), this.installPath()) === '')
+        {
+            return;
+        }
+
         switch(this.m_session.configuration.projectType)
         {
             case 'script':
-                await promisify(fs.unlink)(`${this.m_user_config_path}/scripts/${path.basename(this.m_session.configuration.source)}`);
+                await promisify(fs.unlink)(this.installPath());
             break;
             case 'extension':
                 await this.uninstallExtension(this.m_source_ext_name as string);
@@ -460,6 +439,33 @@ class AsepriteDebugAdapter extends ProtocolServer
         }
 
         return user_config_path;
+    }
+
+    private sourcePath(): string
+    {
+        let folders = vscode.workspace.workspaceFolders;
+        
+        let root = "";
+
+        if(folders?.length! > 0)
+        {
+            root = folders![0].uri.fsPath;
+        }
+
+        return path.join(root, this.m_session.configuration.source);
+    }
+
+    private installPath(): string
+    {
+        switch(this.m_session.configuration.projectType)
+        {
+            case 'script':
+                return `${this.m_user_config_path}/scripts/${path.basename(this.m_session.configuration.source)}`;
+            case 'extension':
+                return `${this.m_user_config_path}/extensions/${this.m_source_ext_name}`;
+        }
+
+        throw new Error("Invalid project type, could not get install directory.");
     }
 
     /**
